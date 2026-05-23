@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OTP Instan — Cek Saldo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080b0f;
+      --surface: #0e1318;
+      --border: #1c2730;
+      --accent: #00e5a0;
+      --accent2: #00b3ff;
+      --danger: #ff4d6d;
+      --text: #e8f0f7;
+      --muted: #4a6070;
+      --card: #111820;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    /* Grid background */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+      animation: fadeDown 0.7s ease both;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,229,160,0.08);
+      border: 1px solid rgba(0,229,160,0.25);
+      border-radius: 99px;
+      padding: 6px 16px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    h1 {
+      font-size: clamp(32px, 6vw, 56px);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+    }
+
+    /* Card */
+    .card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.7s 0.1s ease both;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .card-glow {
+      position: absolute;
+      top: -80px; left: 50%;
+      transform: translateX(-50%);
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(0,229,160,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Input group */
+    .input-label {
+      display: block;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .input-wrap {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .input-wrap svg {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+      transition: color 0.3s;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 50px 16px 48px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,160,0.12);
+    }
+
+    input[type="text"]:focus + .input-wrap svg,
+    .input-wrap:focus-within svg { color: var(--accent); }
+
+    /* Toggle visibility button */
+    .toggle-vis {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      transition: color 0.2s;
+    }
+    .toggle-vis:hover { color: var(--text); }
+
+    /* Button */
+    .btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), #00c985);
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 24px;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn:hover:not(:disabled) {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(0,229,160,0.3);
+    }
+
+    .btn:active:not(:disabled) { transform: translateY(0); }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    /* Result */
+    .result {
+      margin-top: 24px;
+      display: none;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .result.show { display: block; }
+
+    .result-divider {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 24px;
+    }
+
+    .result-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .saldo-display {
+      font-family: 'Space Mono', monospace;
+      font-size: clamp(28px, 8vw, 42px);
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+      line-height: 1;
+      word-break: break-all;
+    }
+
+    .saldo-display .currency {
+      font-size: 0.45em;
+      vertical-align: super;
+      letter-spacing: 0.05em;
+      opacity: 0.7;
+    }
+
+    .result-meta {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* Error */
+    .error-box {
+      display: none;
+      margin-top: 20px;
+      background: rgba(255,77,109,0.08);
+      border: 1px solid rgba(255,77,109,0.3);
+      border-radius: 12px;
+      padding: 14px 18px;
+      color: var(--danger);
+      font-size: 13px;
+      font-family: 'Space Mono', monospace;
+      animation: shake 0.4s ease both;
+    }
+
+    .error-box.show { display: flex; align-items: center; gap: 10px; }
+
+    /* Status pills */
+    .status-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.05em;
+    }
+
+    .pill.ok {
+      background: rgba(0,229,160,0.1);
+      border: 1px solid rgba(0,229,160,0.25);
+      color: var(--accent);
+    }
+
+    .pill.warn {
+      background: rgba(255,180,0,0.08);
+      border: 1px solid rgba(255,180,0,0.25);
+      color: #ffb400;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      animation: fadeUp 0.7s 0.2s ease both;
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* Animations */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Corner decoration */
+    .corner-deco {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      opacity: 0.07;
+      font-size: 64px;
+      font-weight: 800;
+      font-family: 'Space Mono', monospace;
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    @media (max-width: 520px) {
+      .card { padding: 24px 20px; border-radius: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="badge">OTP Instan Reseller</div>
+      <h1>Cek Saldo</h1>
+      <p class="subtitle">Masukkan API key untuk melihat saldo akun</p>
+    </div>
+
+    <div class="card">
+      <div class="card-glow"></div>
+      <div class="corner-deco">Rp</div>
+
+      <label class="input-label" for="apikey">API Key</label>
+      <div class="input-wrap" style="position:relative;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);pointer-events:none;transition:color 0.3s;" id="key-icon">
+          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+        </svg>
+        <input type="password" id="apikey" placeholder="otpk_xxxxxxxxxxxx" autocomplete="off" spellcheck="false" />
+        <button class="toggle-vis" onclick="toggleVis()" title="Tampilkan/sembunyikan" id="vis-btn">
+          <svg id="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+
+      <button class="btn" id="cek-btn" onclick="cekSaldo()">
+        <span class="btn-inner">
+          <div class="spinner" id="spinner"></div>
+          <span id="btn-text">Cek Saldo</span>
+        </span>
+      </button>
+
+      <div class="error-box" id="error-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="error-msg">Terjadi kesalahan.</span>
+      </div>
+
+      <div class="result" id="result">
+        <div class="result-divider"></div>
+        <div class="result-label">Saldo Tersedia</div>
+        <div class="saldo-display">
+          <span class="currency">Rp</span>
+          <span id="saldo-val">0</span>
+        </div>
+        <div class="status-row" id="status-row"></div>
+        <div class="result-meta" id="result-meta"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Powered by <a href="https://otpinstan.com" target="_blank">otpinstan.com</a> &nbsp;·&nbsp; API v2
+    </div>
+  </div>
+
+  <script>
+    let visPass = false;
+
+    function toggleVis() {
+      const inp = document.getElementById('apikey');
+      visPass = !visPass;
+      inp.type = visPass ? 'text' : 'password';
+      document.getElementById('eye-icon').innerHTML = visPass
+        ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`
+        : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+    }
+
+    function formatRupiah(num) {
+      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function animateCount(target) {
+      const el = document.getElementById('saldo-val');
+      const duration = 800;
+      const start = performance.now();
+      const from = 0;
+
+      function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        el.textContent = formatRupiah(Math.round(from + (target - from) * ease));
+        if (progress < 1) requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+    }
+
+    function setLoading(loading) {
+      const btn = document.getElementById('cek-btn');
+      const spinner = document.getElementById('spinner');
+      const btnText = document.getElementById('btn-text');
+      btn.disabled = loading;
+      spinner.style.display = loading ? 'block' : 'none';
+      btnText.textContent = loading ? 'Mengecek...' : 'Cek Saldo';
+    }
+
+    function showError(msg) {
+      const box = document.getElementById('error-box');
+      document.getElementById('error-msg').textContent = msg;
+      box.classList.add('show');
+      document.getElementById('result').classList.remove('show');
+    }
+
+    function hideError() {
+      document.getElementById('error-box').classList.remove('show');
+    }
+
+    async function cekSaldo() {
+      const apiKey = document.getElementById('apikey').value.trim();
+      if (!apiKey) { showError('Masukkan API key terlebih dahulu.'); return; }
+
+      hideError();
+      setLoading(true);
+
+      try {
+        const res = await fetch('/api/balance', {
+          headers: { 'X-Api-Key': apiKey }
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          showError(data.message || 'API key tidak valid atau terjadi kesalahan.');
+          return;
+        }
+
+        // Show result
+        const saldo = data.saldo ?? 0;
+        const resultEl = document.getElementById('result');
+        resultEl.classList.add('show');
+        resultEl.style.animation = 'none';
+        void resultEl.offsetWidth;
+        resultEl.style.animation = '';
+
+        animateCount(saldo);
+
+        // Status pills
+        const statusRow = document.getElementById('status-row');
+        statusRow.innerHTML = '';
+
+        const okPill = document.createElement('span');
+        okPill.className = 'pill ok';
+        okPill.innerHTML = `<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="12"/></svg> Aktif`;
+        statusRow.appendChild(okPill);
+
+        if (saldo < 10000) {
+          const warnPill = document.createElement('span');
+          warnPill.className = 'pill warn';
+          warnPill.innerHTML = `<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2z"/></svg> Saldo Rendah`;
+          statusRow.appendChild(warnPill);
+        }
+
+        // Timestamp
+        const now = new Date();
+        document.getElementById('result-meta').textContent =
+          `Diperbarui: ${now.toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' })} ${now.toLocaleTimeString('id-ID')}`;
+
+      } catch (e) {
+        showError('Gagal terhubung ke server. Periksa koneksi internet kamu.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Enter key support
+    document.getElementById('apikey').addEventListener('keydown', e => {
+      if (e.key === 'Enter') cekSaldo();
+    });
+  </script>
+</body>
+</html>
